@@ -9,24 +9,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: VTR_PIE_EMUI9.0.1/kernel
-
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential bison flex libssl-dev bc libncurses-dev
 
-      - name: Prepare NetHunter .config
-        run: |
-          cp .config .config   # Optionnel si .config est déjà présent
-
-      - name: Compile kernel
+      - name: Build kernel
+        working-directory: VTR_PIE_EMUI9.0.1/kernel
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
           make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
@@ -35,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NetHunter-Image.gz-dtb
-          path: arch/arm64/boot/Image.gz-dtb
+          path: VTR_PIE_EMUI9.0.1/kernel/arch/arm64/boot/Image.gz-dtb
