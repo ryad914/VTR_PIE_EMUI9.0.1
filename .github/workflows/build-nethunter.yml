@@ -1,0 +1,38 @@
+name: Build NetHunter Kernel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [kernel-only]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: VTR_PIE_EMUI9.0.1/kernel
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex libssl-dev bc libncurses-dev
+
+      - name: Use NetHunter .config
+        run: |
+          cp .config .config   # Si le fichier est déjà là, cette étape est inutile mais ne gêne pas
+
+      - name: Compile kernel
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
+          make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+
+      - name: Upload kernel image (Image.gz-dtb)
+        uses: actions/upload-artifact@v3
+        with:
+          name: NetHunter-Image.gz-dtb
+          path: arch/arm64/boot/Image.gz-dtb
