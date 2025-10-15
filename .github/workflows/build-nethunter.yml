@@ -19,7 +19,7 @@ jobs:
           sudo apt-get install -y build-essential bison flex libssl-dev bc libncurses-dev
 
       - name: Build kernel
-        working-directory: VTR_PIE_EMUI9.0.1/kernel
+        working-directory: kernel
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oldconfig
           make -j$(nproc) ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NetHunter-Image.gz-dtb
-          path: VTR_PIE_EMUI9.0.1/kernel/arch/arm64/boot/Image.gz-dtb
+          path: kernel/arch/arm64/boot/Image.gz-dtb
