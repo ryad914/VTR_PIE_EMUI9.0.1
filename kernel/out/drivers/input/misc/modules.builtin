@@ -1,0 +1,2 @@
+kernel/drivers/input/misc/hisi_powerkey_ssi.ko
+kernel/drivers/input/misc/uinput.ko

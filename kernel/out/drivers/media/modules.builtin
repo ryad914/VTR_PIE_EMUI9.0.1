@@ -1,0 +1,12 @@
+kernel/drivers/media/media.ko
+kernel/drivers/media/huawei/camera/laser/vl53l0_ml.ko
+kernel/drivers/media/huawei/camera/laser/vl53l0_cmb.ko
+kernel/drivers/media/huawei/camera/laser/vl53l0_duke.ko
+kernel/drivers/media/huawei/camera/laser/gp2ap0xvt_stf.ko
+kernel/drivers/media/huawei/camera/laser/vl53l0_stf.ko
+kernel/drivers/media/jpeg/jpeg_base.ko
+kernel/drivers/media/v4l2-core/videodev.ko
+kernel/drivers/media/v4l2-core/v4l2-common.ko
+kernel/drivers/media/v4l2-core/v4l2-dv-timings.ko
+kernel/drivers/media/v4l2-core/videobuf2-core.ko
+kernel/drivers/media/v4l2-core/videobuf2-v4l2.ko

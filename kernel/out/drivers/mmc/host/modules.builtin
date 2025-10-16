@@ -1,0 +1,11 @@
+kernel/drivers/mmc/host/sdhci.ko
+kernel/drivers/mmc/host/sdhci_hisi.ko
+kernel/drivers/mmc/host/sdhci-of-arasan.ko
+kernel/drivers/mmc/host/dw_mmc.ko
+kernel/drivers/mmc/host/dw_mmc-pltfm.ko
+kernel/drivers/mmc/host/dw_mmc_hi3xxx.ko
+kernel/drivers/mmc/host/dw_mmc_test.ko
+kernel/drivers/mmc/host/sdhci-pltfm.ko
+kernel/drivers/mmc/host/sdhci-of-arasan.ko
+kernel/drivers/mmc/host/cmdq_hci.ko
+kernel/drivers/mmc/host/hisi_sdhci_cmdq.ko

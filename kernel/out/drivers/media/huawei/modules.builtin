@@ -1,0 +1,5 @@
+kernel/drivers/media/huawei/camera/laser/vl53l0_ml.ko
+kernel/drivers/media/huawei/camera/laser/vl53l0_cmb.ko
+kernel/drivers/media/huawei/camera/laser/vl53l0_duke.ko
+kernel/drivers/media/huawei/camera/laser/gp2ap0xvt_stf.ko
+kernel/drivers/media/huawei/camera/laser/vl53l0_stf.ko

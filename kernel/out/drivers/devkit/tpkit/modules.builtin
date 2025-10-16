@@ -1,0 +1,8 @@
+kernel/drivers/devkit/tpkit/tp_color.ko
+kernel/drivers/devkit/tpkit/hostprocessing/thp.ko
+kernel/drivers/devkit/tpkit/hostprocessing/bu21150_thp.ko
+kernel/drivers/devkit/tpkit/panel/atmel/atmel_ts.ko
+kernel/drivers/devkit/tpkit/panel/novatek/novatek_ts.ko
+kernel/drivers/devkit/tpkit/panel/parade/parade.ko
+kernel/drivers/devkit/tpkit/panel/synaptics/synaptics_driver.ko
+kernel/drivers/devkit/tpkit/panel/wacom/wacom_ts.ko

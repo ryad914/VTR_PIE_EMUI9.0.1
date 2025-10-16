@@ -1,0 +1,5 @@
+kernel/drivers/huawei_platform/sw/sw_core.ko
+kernel/drivers/huawei_platform/sw/sw_hid_vendor.ko
+kernel/drivers/huawei_platform/sw/sw_hid.ko
+kernel/drivers/huawei_platform/sw/sw_debug.ko
+kernel/drivers/huawei_platform/sw/sw_utils.ko

@@ -1,0 +1,4 @@
+kernel/drivers/net/wireless/realtek/rtl818x/rtl8180/rtl818x_pci.ko
+kernel/drivers/net/wireless/realtek/rtl818x/rtl8187/rtl8187.ko
+kernel/drivers/net/wireless/realtek/rtl8812au/88XXau.ko
+kernel/drivers/net/wireless/realtek/rtl8xxxu/rtl8xxxu.ko

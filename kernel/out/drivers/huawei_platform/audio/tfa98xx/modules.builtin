@@ -1,0 +1,2 @@
+kernel/drivers/huawei_platform/audio/tfa98xx/tfa98xx.ko
+kernel/drivers/huawei_platform/audio/tfa98xx/tfa9872/tfa9872.ko

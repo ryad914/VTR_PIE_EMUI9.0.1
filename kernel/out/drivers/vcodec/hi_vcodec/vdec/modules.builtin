@@ -1,0 +1,2 @@
+kernel/drivers/vcodec/hi_vcodec/vdec/omxvdec/hi_omxvdec.ko
+kernel/drivers/vcodec/hi_vcodec/vdec/vfmw/vfmw_v4.0/hi_vfmw.ko

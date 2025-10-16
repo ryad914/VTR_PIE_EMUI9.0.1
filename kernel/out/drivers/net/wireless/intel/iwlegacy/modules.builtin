@@ -1,0 +1,2 @@
+kernel/drivers/net/wireless/intel/iwlegacy/iwlegacy.ko
+kernel/drivers/net/wireless/intel/iwlegacy/iwl4965.ko
