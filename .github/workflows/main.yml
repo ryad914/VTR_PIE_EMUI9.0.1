@@ -1,0 +1,108 @@
+name: Android Kernel Build
+
+on:
+  push:
+    branches:
+      - main
+  # Permet de déclencher la compilation manuellement depuis l'onglet Actions
+  workflow_dispatch:
+    inputs:
+        kernel_branch:
+          description: "Kernel Git Branch or Tag to build"
+          required: true
+          default: "master"
+        defconfig_name:
+          description: "Defconfig filename (e.g., merge_hi3660_defconfig)"
+          required: true
+          default: "merge_hi3660_defconfig"
+          
+permissions:
+  contents: write
+
+env:
+  # --- Variables pour la compilation du noyau ---
+  KERNEL_SOURCE_DIR: 'kernel'               # Le répertoire où se trouve le code source du noyau
+  ARCH: 'arm64'                              # Architecture cible (typiquement 'arm64')
+  CROSS_COMPILE_PREFIX: 'aarch64-linux-gnu-' # Préfixe pour la toolchain
+  COMPILER: 'clang'                          # Utiliser 'clang'
+  CLANG_TRIPLE: 'aarch64-linux-gnu-'         # Triple de la toolchain (pour Clang)
+  CLANG_VERSION: '17'                        # Version de Clang AOSP
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Cloner la branche spécifiée par l'utilisateur, ou 'main' par défaut
+          ref: ${{ github.event.inputs.kernel_branch || github.ref_name }} 
+          submodules: recursive # Assure que les toolchains en sous-module sont incluses
+
+      - name: 🛠️ Install Build Dependencies (Linux Kernel)
+        run: |
+          sudo apt update
+          # Dépendances essentielles pour la compilation
+          sudo apt install -y build-essential libncurses-dev flex bison bc
+          # Installer wget et git s'ils ne sont pas déjà là
+          sudo apt install -y wget git
+
+      - name: ⬇️ Download AOSP Clang Toolchain (Clang 17)
+        uses: actions/checkout@v4
+        with:
+          # Télécharge la toolchain LineageOS Clang 17 dans un répertoire 'clang'
+          repository: 'LineageOS/android_prebuilts_clang_host_linux-x86_clang-17.0.6' 
+          path: 'clang'
+          
+      - name: 🔗 Set Toolchain Path for Compilation
+        run: |
+          # Configure les chemins pour que Make trouve le compilateur
+          export PATH=$PWD/clang/bin:$PATH
+          echo "PATH=$PWD/clang/bin:$PATH" >> $GITHUB_ENV
+          
+      - name: ⚙️ Configure Kernel (using defconfig)
+        run: |
+          cd ${{ env.KERNEL_SOURCE_DIR }}
+          
+          # Copie le defconfig dans le répertoire de sortie 'out'
+          make O=out ARCH=${{ env.ARCH }} ${{ github.event.inputs.defconfig_name }}
+          
+          echo "Configuration file used: ${{ github.event.inputs.defconfig_name }}"
+
+      - name: 🔨 Compile Kernel (Multithreaded)
+        timeout-minutes: 45 # Limite le temps de compilation pour éviter de consommer toutes les minutes gratuites en cas de blocage
+        run: |
+          cd ${{ env.KERNEL_SOURCE_DIR }}
+          
+          # La variable -j$(nproc) utilise tous les cœurs disponibles pour accélérer le processus
+          make -j$(nproc) O=out \
+            ARCH=${{ env.ARCH }} \
+            CLANG_TRIPLE=${{ env.CLANG_TRIPLE }} \
+            CROSS_COMPILE=${{ env.CROSS_COMPILE_PREFIX }} \
+            CC=${{ env.COMPILER }} \
+            # Ajoutez ces drapeaux si la compilation échoue (optionnel)
+            # HOSTCC=gcc HOSTCXX=g++
+
+      - name: 📦 Publish Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-kernel-${{ github.sha }}
+          path: |
+            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz-dtb
+            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image*
+            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/zImage*
+          retention-days: 1
+          if-no-files-found: "warn"
+          
+      - name: ✅ Check Output Files
+        if: always()
+        run: |
+          echo "Listing potential kernel images in the output directory:"
+          find ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/ -maxdepth 1 -name "Image*" || true
+          
+  # Le job de 'release' n'est pas nécessaire pour une simple compilation, nous le laissons pour l'instant
+  # mais il devra être adapté si vous voulez créer une Release GitHub
+  # release:
+  #   ... (Gardez-le ou supprimez-le si vous ne voulez pas créer de release)
+  #   ... 
+  
