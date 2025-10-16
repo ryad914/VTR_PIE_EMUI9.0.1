@@ -104,5 +104,5 @@ jobs:
   # mais il devra être adapté si vous voulez créer une Release GitHub
   # release:
   #   ... (Gardez-le ou supprimez-le si vous ne voulez pas créer de release)
-  #   ... 
+  #   ...
   
