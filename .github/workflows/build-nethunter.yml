@@ -1,4 +1,4 @@
-name: Android Kernel Build
+name: nethunter Kernel Build
 
 on:
   push:
@@ -7,11 +7,11 @@ on:
   # Permet de déclencher la compilation manuellement depuis l'onglet Actions
   workflow_dispatch:
     inputs:
-        kernel_branch:
+        kernel_branch: kernel-only
           description: "Kernel Git Branch or Tag to build"
           required: true
           default: "master"
-        defconfig_name:
+        defconfig_name: merge_hi3660_defconfig
           description: "Defconfig filename (e.g., merge_hi3660_defconfig)"
           required: true
           default: "merge_hi3660_defconfig"
