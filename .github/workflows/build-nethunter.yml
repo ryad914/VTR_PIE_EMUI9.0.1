@@ -71,17 +71,20 @@ jobs:
         run: |
           cd ${{ env.KERNEL_SOURCE_DIR }}
           
-          # Créer le répertoire de sortie
+          # Créer le répertoire de sortie 'out'
           mkdir -p out
           
-          # Copier le .config modifié par l'utilisateur (avec les options NetHunter) vers le répertoire de sortie
+          # Copier le .config poussé par l'utilisateur vers le répertoire de sortie
           if [ -f .config ]; then
               cp .config out/.config
-              echo "Utilisation du fichier .config existant pour la configuration."
-              # Mettre à jour la configuration pour l'environnement du runner GitHub
-              make O=out ARCH=${{ env.ARCH }} oldconfig
+              echo "Utilisation du fichier .config existant poussé dans le répertoire 'kernel/'."
+              
+              # Met à jour la configuration en utilisant le .config pour s'adapter à l'environnement
+              make O=out ARCH=${{ env.ARCH }} oldconfig 
+              
           else
-              echo "ERREUR : Le fichier .config n'a pas été trouvé. Assurez-vous qu'il est poussé dans le répertoire 'kernel/'."
+              # Cette erreur ne devrait plus apparaître si le .config est bien dans kernel/
+              echo "ERREUR : Le fichier .config n'a pas été trouvé dans le répertoire source 'kernel/'."
               exit 1
           fi
           
