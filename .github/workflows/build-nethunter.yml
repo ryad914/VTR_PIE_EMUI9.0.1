@@ -1,33 +1,30 @@
-name: nethunter Kernel Build
+name: VTR Kernel Build (GCC 4.9)
 
 on:
   push:
     branches:
-      - kernel-only
+      - kernel-only # S'exécute quand vous poussez sur cette branche
   # Permet de déclencher la compilation manuellement depuis l'onglet Actions
   workflow_dispatch:
     inputs:
-        kernel_branch: kernel-only
-          description: "Kernel Git Branch or Tag to build"
-          required: true
-          default: "master"
-        defconfig_name: merge_hi3660_defconfig
-          description: "Defconfig filename (e.g., merge_hi3660_defconfig)"
-          required: true
-          default: "merge_hi3660_defconfig"
+        build_info:
+          description: "Build triggered manually for VTR Kernel"
+          required: false
+          default: "Manual run"
           
 permissions:
   contents: write
 
 env:
-  # --- Variables pour la compilation du noyau ---
-  KERNEL_SOURCE_DIR: 'kernel'               # Le répertoire où se trouve le code source du noyau
-  ARCH: 'arm64'                              # Architecture cible (typiquement 'arm64')
-  CROSS_COMPILE_PREFIX: 'aarch64-linux-gnu-' # Préfixe pour la toolchain
-  COMPILER: 'clang'                          # Utiliser 'clang'
-  CLANG_TRIPLE: 'aarch64-linux-gnu-'         # Triple de la toolchain (pour Clang)
-  CLANG_VERSION: '17'                        # Version de Clang AOSP
-
+  # --- Variables pour la compilation EMUI 9.0.1 (Hi3660) ---
+  KERNEL_SOURCE_DIR: 'kernel'               # L'emplacement du Makefile dans votre dépôt
+  ARCH: 'arm64'                              # Architecture cible
+  # Prefix basé sur le README: aarch64-linux-android-
+  CROSS_COMPILE_PREFIX: 'aarch64-linux-android-' 
+  DEFCONFIG: 'merge_hi3660_defconfig'       # Confirmé par le README
+  TOOLCHAIN_NAME: 'gcc-4.9'                  # Toolchain requise
+  TOOLCHAIN_URL: 'https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/archive/refs/heads/master.zip'
+  
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,74 +32,57 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Cloner la branche spécifiée par l'utilisateur, ou 'main' par défaut
-          ref: ${{ github.event.inputs.kernel_branch || github.ref_name }} 
-          submodules: recursive # Assure que les toolchains en sous-module sont incluses
+          ref: kernel-only # Clone la branche spécifique
+          submodules: recursive 
 
-      - name: 🛠️ Install Build Dependencies (Linux Kernel)
+      - name: 🛠️ Install Build Dependencies
         run: |
           sudo apt update
-          # Dépendances essentielles pour la compilation
-          sudo apt install -y build-essential libncurses-dev flex bison bc
-          # Installer wget et git s'ils ne sont pas déjà là
-          sudo apt install -y wget git
+          sudo apt install -y build-essential libncurses-dev flex bison bc unzip wget git
 
-      - name: ⬇️ Download AOSP Clang Toolchain (Clang 17)
-        uses: actions/checkout@v4
-        with:
-          # Télécharge la toolchain LineageOS Clang 17 dans un répertoire 'clang'
-          repository: 'LineageOS/android_prebuilts_clang_host_linux-x86_clang-17.0.6' 
-          path: 'clang'
-          
-      - name: 🔗 Set Toolchain Path for Compilation
+      - name: ⬇️ Download & Configure GCC 4.9 Toolchain
         run: |
-          # Configure les chemins pour que Make trouve le compilateur
-          export PATH=$PWD/clang/bin:$PATH
-          echo "PATH=$PWD/clang/bin:$PATH" >> $GITHUB_ENV
+          echo "Downloading required GCC 4.9 toolchain..."
+          # Télécharge et dézippe la toolchain LineageOS GCC 4.9
+          wget -q -O toolchain.zip ${{ env.TOOLCHAIN_URL }}
+          unzip -q toolchain.zip -d ./
           
-      - name: ⚙️ Configure Kernel (using defconfig)
+          # Le nom du dossier dézippé est long, on le renomme pour plus de simplicité
+          TOOLCHAIN_DIR=$(find . -maxdepth 1 -type d -name "android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9*")
+          mv $TOOLCHAIN_DIR toolchain
+          
+          # Ajoute le chemin /bin de la toolchain à la variable PATH (comme dans votre README)
+          echo "PATH=$PWD/toolchain/bin:$PATH" >> $GITHUB_ENV
+          
+      - name: ⚙️ Configure Kernel (defconfig)
         run: |
           cd ${{ env.KERNEL_SOURCE_DIR }}
-          
-          # Copie le defconfig dans le répertoire de sortie 'out'
-          make O=out ARCH=${{ env.ARCH }} ${{ github.event.inputs.defconfig_name }}
-          
-          echo "Configuration file used: ${{ github.event.inputs.defconfig_name }}"
+          # Exécute la commande de configuration spécifique au README
+          make O=out ARCH=${{ env.ARCH }} ${{ env.DEFCONFIG }}
 
       - name: 🔨 Compile Kernel (Multithreaded)
-        timeout-minutes: 45 # Limite le temps de compilation pour éviter de consommer toutes les minutes gratuites en cas de blocage
+        timeout-minutes: 45
         run: |
           cd ${{ env.KERNEL_SOURCE_DIR }}
           
-          # La variable -j$(nproc) utilise tous les cœurs disponibles pour accélérer le processus
+          # Exécute la commande de compilation spécifique au README
           make -j$(nproc) O=out \
             ARCH=${{ env.ARCH }} \
-            CLANG_TRIPLE=${{ env.CLANG_TRIPLE }} \
-            CROSS_COMPILE=${{ env.CROSS_COMPILE_PREFIX }} \
-            CC=${{ env.COMPILER }} \
-            # Ajoutez ces drapeaux si la compilation échoue (optionnel)
-            # HOSTCC=gcc HOSTCXX=g++
+            CROSS_COMPILE=${{ env.CROSS_COMPILE_PREFIX }}
 
       - name: 📦 Publish Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: compiled-kernel-${{ github.sha }}
+          # Chemin de sortie confirmé par votre README
           path: |
-            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz-dtb
-            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image*
-            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/zImage*
-          retention-days: 1
-          if-no-files-found: "warn"
+            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz
+            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz-dtb # Inclus au cas où
+          retention-days: 7
+          if-no-files-found: "error"
           
-      - name: ✅ Check Output Files
-        if: always()
+      - name: ✅ Verify Final Output
         run: |
-          echo "Listing potential kernel images in the output directory:"
-          find ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/ -maxdepth 1 -name "Image*" || true
+          ls -l ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz
+          echo "Compilation finished. Check Artifacts for Image.gz."
           
-  # Le job de 'release' n'est pas nécessaire pour une simple compilation, nous le laissons pour l'instant
-  # mais il devra être adapté si vous voulez créer une Release GitHub
-  # release:
-  #   ... (Gardez-le ou supprimez-le si vous ne voulez pas créer de release)
-  #   ...
-  
