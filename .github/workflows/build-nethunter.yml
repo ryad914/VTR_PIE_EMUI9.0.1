@@ -74,6 +74,11 @@ jobs:
           # Créer le répertoire de sortie 'out'
           mkdir -p out
           
+          # --- CORRECTION "is not clean" ---
+          echo "Exécution de 'make clean' pour garantir un état propre du répertoire source..."
+          make clean O=out ARCH=${{ env.ARCH }} 
+          # ----------------------------------
+          
           # Copier le .config poussé par l'utilisateur vers le répertoire de sortie
           if [ -f .config ]; then
               cp .config out/.config
@@ -83,8 +88,7 @@ jobs:
               make O=out ARCH=${{ env.ARCH }} oldconfig 
               
           else
-              # Cette erreur ne devrait plus apparaître si le .config est bien dans kernel/
-              echo "ERREUR : Le fichier .config n'a pas été trouvé dans le répertoire source 'kernel/'."
+              echo "ERREUR CRITIQUE : Le fichier .config n'a pas été trouvé dans le répertoire source 'kernel/'."
               exit 1
           fi
           
