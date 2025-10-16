@@ -3,7 +3,7 @@ name: Android Kernel Build
 on:
   push:
     branches:
-      - main
+      - kernel-only
   # Permet de déclencher la compilation manuellement depuis l'onglet Actions
   workflow_dispatch:
     inputs:
