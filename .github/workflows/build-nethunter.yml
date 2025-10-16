@@ -1,88 +1,115 @@
-name: VTR Kernel Build (GCC 4.9)
+name: VTR NetHunter Kernel Build
 
+# ----------------------------------------------------------------------
+# DÉCLENCHEURS
+# ----------------------------------------------------------------------
 on:
   push:
     branches:
-      - kernel-only # S'exécute quand vous poussez sur cette branche
-  # Permet de déclencher la compilation manuellement depuis l'onglet Actions
+      - kernel-only # Déclenche la compilation lors d'un 'git push' sur cette branche
   workflow_dispatch:
+    # Permet de lancer le build manuellement depuis l'interface GitHub
     inputs:
-        build_info:
-          description: "Build triggered manually for VTR Kernel"
-          required: false
-          default: "Manual run"
+        build_mode:
+          description: "Mode de compilation"
+          required: true
+          default: "kernel-only"
+          type: choice
+          options:
+          - "kernel-only"
+          - "full-package"
           
 permissions:
   contents: write
 
+# ----------------------------------------------------------------------
+# VARIABLES D'ENVIRONNEMENT
+# ----------------------------------------------------------------------
 env:
-  # --- Variables pour la compilation EMUI 9.0.1 (Hi3660) ---
-  KERNEL_SOURCE_DIR: 'kernel'               # L'emplacement du Makefile dans votre dépôt
+  # Renseignements basés sur le README du noyau VTR EMUI (Hi3660)
+  KERNEL_SOURCE_DIR: 'kernel'               # Le répertoire où se trouve le Makefile
   ARCH: 'arm64'                              # Architecture cible
-  # Prefix basé sur le README: aarch64-linux-android-
+  # Le préfixe de compilation pour la toolchain GCC 4.9 Android
   CROSS_COMPILE_PREFIX: 'aarch64-linux-android-' 
-  DEFCONFIG: 'merge_hi3660_defconfig'       # Confirmé par le README
-  TOOLCHAIN_NAME: 'gcc-4.9'                  # Toolchain requise
+  
+  # Toolchain (GCC 4.9) nécessaire pour les anciens noyaux Android EMUI
   TOOLCHAIN_URL: 'https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/archive/refs/heads/master.zip'
   
+# ----------------------------------------------------------------------
+# JOB DE COMPILATION
+# ----------------------------------------------------------------------
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: ⬇️ Checkout Code (Ignorer les Sous-Modules)
         uses: actions/checkout@v4
         with:
-          ref: kernel-only # Clone la branche spécifique
-          submodules: recursive 
+          ref: kernel-only 
+          submodules: false # ESSENTIEL : Évite l'erreur du sous-module NetHunter défectueux
 
-      - name: 🛠️ Install Build Dependencies
+      - name: 🛠️ Installer les Dépendances Linux (Build Essentials, etc.)
         run: |
           sudo apt update
-          sudo apt install -y build-essential libncurses-dev flex bison bc unzip wget git
+          sudo apt install -y build-essential libncurses-dev flex bison bc unzip wget git lzop
 
-      - name: ⬇️ Download & Configure GCC 4.9 Toolchain
+      - name: 📦 Télécharger et Configurer la Toolchain GCC 4.9
+        id: toolchain_setup
         run: |
-          echo "Downloading required GCC 4.9 toolchain..."
-          # Télécharge et dézippe la toolchain LineageOS GCC 4.9
+          echo "Téléchargement de la toolchain GCC 4.9 requise..."
           wget -q -O toolchain.zip ${{ env.TOOLCHAIN_URL }}
           unzip -q toolchain.zip -d ./
           
-          # Le nom du dossier dézippé est long, on le renomme pour plus de simplicité
+          # Renomme le dossier pour faciliter le chemin
           TOOLCHAIN_DIR=$(find . -maxdepth 1 -type d -name "android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9*")
           mv $TOOLCHAIN_DIR toolchain
           
-          # Ajoute le chemin /bin de la toolchain à la variable PATH (comme dans votre README)
+          # Ajoute le chemin /bin de la toolchain à la variable PATH pour que 'make' la trouve
           echo "PATH=$PWD/toolchain/bin:$PATH" >> $GITHUB_ENV
           
-      - name: ⚙️ Configure Kernel (defconfig)
+      - name: ⚙️ Préparer la Configuration du Noyau (Utilisation du .config existant)
         run: |
           cd ${{ env.KERNEL_SOURCE_DIR }}
-          # Exécute la commande de configuration spécifique au README
-          make O=out ARCH=${{ env.ARCH }} ${{ env.DEFCONFIG }}
-
-      - name: 🔨 Compile Kernel (Multithreaded)
+          
+          # Créer le répertoire de sortie
+          mkdir -p out
+          
+          # Copier le .config modifié par l'utilisateur (avec les options NetHunter) vers le répertoire de sortie
+          if [ -f .config ]; then
+              cp .config out/.config
+              echo "Utilisation du fichier .config existant pour la configuration."
+              # Mettre à jour la configuration pour l'environnement du runner GitHub
+              make O=out ARCH=${{ env.ARCH }} oldconfig
+          else
+              echo "ERREUR : Le fichier .config n'a pas été trouvé. Assurez-vous qu'il est poussé dans le répertoire 'kernel/'."
+              exit 1
+          fi
+          
+      - name: 🔨 Compiler le Noyau et les Modules
         timeout-minutes: 45
         run: |
           cd ${{ env.KERNEL_SOURCE_DIR }}
           
-          # Exécute la commande de compilation spécifique au README
+          # Lancement de la compilation principale (Utilisation de tous les cœurs disponibles)
           make -j$(nproc) O=out \
             ARCH=${{ env.ARCH }} \
             CROSS_COMPILE=${{ env.CROSS_COMPILE_PREFIX }}
 
-      - name: 📦 Publish Artifacts
+      - name: 📦 Archiver les Artefacts Compilés
         uses: actions/upload-artifact@v4
         with:
-          name: compiled-kernel-${{ github.sha }}
-          # Chemin de sortie confirmé par votre README
+          name: VTR-NetHunter-Kernel-GCC49-${{ github.sha }}
+          # Inclut l'image du noyau (Image.gz) et les modules (.ko)
           path: |
             ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz
-            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz-dtb # Inclus au cas où
+            ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz-dtb
+            ${{ env.KERNEL_SOURCE_DIR }}/out/drivers/**/*.ko 
           retention-days: 7
           if-no-files-found: "error"
           
-      - name: ✅ Verify Final Output
+      - name: ✅ Vérification de la sortie
+        if: success()
         run: |
+          echo "Compilation réussie. Le fichier Image.gz est disponible dans les Artefacts."
           ls -l ${{ env.KERNEL_SOURCE_DIR }}/out/arch/${{ env.ARCH }}/boot/Image.gz
-          echo "Compilation finished. Check Artifacts for Image.gz."
-          
+
